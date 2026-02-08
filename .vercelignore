@@ -1,0 +1,52 @@
+# Vercel Ignore File
+# Files and directories to exclude from deployment
+
+# Node modules
+node_modules/
+backend/node_modules/
+frontend/node_modules/
+api/node_modules/
+
+# Tests
+**/__tests__/
+**/*.test.ts
+**/*.test.tsx
+*.test.ts
+*.test.tsx
+vitest.config.ts
+backend/vitest.config.ts
+frontend/vitest.config.ts
+
+# Test files
+backend/TEST_SETUP.md
+backend/.env.test
+
+# Development files
+*.log
+.env
+.env.local
+.env.development
+backend/.env
+frontend/.env
+
+# Build artifacts
+backend/dist/
+frontend/dist/
+
+# IDE
+.vscode/
+.idea/
+
+# Git
+.git/
+.gitignore
+
+# Documentation (optional - remove if you want to include)
+*.md
+!DEPLOYMENT.md
+
+# Spec files
+.kiro/
+
+# CSV data (will be in database)
+*.csv
