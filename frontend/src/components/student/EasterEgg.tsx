@@ -7,7 +7,6 @@ interface EasterEggProps {
 export default function EasterEgg({ onComplete }: EasterEggProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [showConfetti, setShowConfetti] = useState(false);
-  const [videoEnded, setVideoEnded] = useState(false);
 
   useEffect(() => {
     // Attempt to play video with full volume
@@ -40,7 +39,6 @@ export default function EasterEgg({ onComplete }: EasterEggProps) {
   }, []);
 
   const handleVideoEnd = () => {
-    setVideoEnded(true);
     // Wait 3 seconds after video ends to show QR code
     setTimeout(() => {
       onComplete();
