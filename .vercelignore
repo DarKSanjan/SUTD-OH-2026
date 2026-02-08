@@ -18,7 +18,6 @@ backend/.env.test
 
 # Build artifacts
 backend/dist/
-frontend/dist/
 
 # IDE
 .vscode/
