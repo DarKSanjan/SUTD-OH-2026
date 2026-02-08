@@ -9,7 +9,7 @@
 // Get the API base URL from environment variables
 // In production (Vercel), this should be set to the deployment URL
 // In development, it defaults to localhost:3000
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+export const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 // Export other environment variables as needed
 export const NODE_ENV = import.meta.env.MODE || 'development';
