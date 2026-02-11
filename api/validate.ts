@@ -1,7 +1,7 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import crypto from 'crypto';
 import QRCode from 'qrcode';
-import { withCors, sendError, sendSuccess, findStudentById, createToken, parseOrganizationDetails } from './_shared';
+import { withCors, sendError, sendSuccess, findStudentById, createToken, parseOrganizationDetails, getClaimStatus } from './_shared';
 
 async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
