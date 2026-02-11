@@ -1,5 +1,5 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import { withCors, sendError, sendSuccess, getPool, parseOrganizationDetails } from '../_shared';
+import { withCors, sendError, sendSuccess, getPool } from '../_shared';
 
 async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
@@ -30,10 +30,10 @@ async function handler(req: VercelRequest, res: VercelResponse) {
       name: row.name,
       tshirtSize: row.tshirtSize,
       mealPreference: row.mealPreference,
-      involvements: parseOrganizationDetails(row.organizationDetails),
+      organizationDetails: row.organizationDetails,
       consented: row.consented,
-      tshirtClaimed: row.tshirtClaimed,
-      mealClaimed: row.mealClaimed,
+      shirtCollected: row.tshirtClaimed,
+      mealCollected: row.mealClaimed,
     }));
 
     return sendSuccess(res, { students });
