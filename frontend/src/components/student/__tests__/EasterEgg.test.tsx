@@ -1,15 +1,22 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import EasterEgg from '../EasterEgg';
 
 describe('EasterEgg', () => {
+  beforeEach(() => {
+    // Mock HTMLVideoElement.prototype.play to return a resolved promise
+    HTMLVideoElement.prototype.play = vi.fn().mockResolvedValue(undefined);
+    HTMLVideoElement.prototype.pause = vi.fn();
+    HTMLVideoElement.prototype.load = vi.fn();
+  });
+
   it('renders video element', () => {
     const onComplete = vi.fn();
     render(<EasterEgg onComplete={onComplete} />);
     
     const video = document.querySelector('video');
     expect(video).toBeTruthy();
-    expect(video?.src).toContain('Cenafy%20John%20Cena.mp4');
+    expect(video?.querySelector('source')?.src).toContain('Cenafy');
   });
 
   it('calls onComplete when video ends', () => {

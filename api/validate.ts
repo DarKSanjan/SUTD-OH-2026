@@ -26,6 +26,9 @@ async function handler(req: VercelRequest, res: VercelResponse) {
     const qrData = JSON.stringify({ token, studentId: student.studentId });
     const qrCode = await QRCode.toDataURL(qrData, { errorCorrectionLevel: 'M', type: 'image/png', margin: 1 });
 
+    // Get collection status
+    const claimStatus = await getClaimStatus(student.studentId);
+
     return sendSuccess(res, {
       student: {
         studentId: student.studentId,
@@ -36,6 +39,10 @@ async function handler(req: VercelRequest, res: VercelResponse) {
       },
       qrCode,
       token,
+      collectionStatus: {
+        shirtCollected: claimStatus?.tshirtClaimed || false,
+        mealCollected: claimStatus?.mealClaimed || false,
+      },
     });
   } catch (error) {
     console.error('Error in /api/validate:', error);

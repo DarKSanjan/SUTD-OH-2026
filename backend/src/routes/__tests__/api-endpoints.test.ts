@@ -4,6 +4,7 @@ import express, { Express } from 'express';
 import validateRouter from '../validate';
 import scanRouter from '../scan';
 import claimRouter from '../claim';
+import consentRouter from '../consent';
 import pool from '../../db/config';
 import StudentDAO from '../../dao/StudentDAO';
 import TokenService from '../../services/TokenService';
@@ -17,7 +18,7 @@ import { errorHandler, notFoundHandler } from '../../middleware/errorHandler';
  * Tests error responses (400, 404, 409, 500)
  * Tests response formats match specifications
  * 
- * **Validates: Requirements 2.1, 2.2, 2.3, 4.3, 4.4, 4.5, 7.1, 7.2**
+ * **Validates: Requirements 2.1, 2.2, 2.3, 4.3, 4.4, 4.5, 4.6, 7.1, 7.2**
  */
 
 describe('API Endpoints', () => {
@@ -32,6 +33,7 @@ describe('API Endpoints', () => {
     app.use('/api', validateRouter);
     app.use('/api', scanRouter);
     app.use('/api', claimRouter);
+    app.use('/api', consentRouter);
     
     // Add error handling middleware
     app.use(notFoundHandler);
@@ -46,6 +48,7 @@ describe('API Endpoints', () => {
         tshirt_size TEXT NOT NULL,
         meal_preference TEXT NOT NULL,
         organization_details TEXT,
+        consented BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
@@ -726,6 +729,177 @@ describe('API Endpoints', () => {
       // Verify only one claim was recorded
       const claim = await ClaimDAO.findByStudentId('TEST001');
       expect(claim?.tshirtClaimed).toBe(true);
+    });
+  });
+
+  describe('POST /api/consent', () => {
+    describe('Valid inputs', () => {
+      it('should successfully record consent for a valid student ID', async () => {
+        const response = await request(app)
+          .post('/api/consent')
+          .send({ studentId: 'TEST001', consented: true })
+          .expect(200);
+
+        expect(response.body).toEqual({
+          success: true,
+          message: 'Consent recorded successfully'
+        });
+
+        // Verify in database
+        const student = await StudentDAO.findByStudentId('TEST001');
+        expect(student?.consented).toBe(true);
+      });
+
+      it('should successfully record consent as false', async () => {
+        const response = await request(app)
+          .post('/api/consent')
+          .send({ studentId: 'TEST001', consented: false })
+          .expect(200);
+
+        expect(response.body).toEqual({
+          success: true,
+          message: 'Consent recorded successfully'
+        });
+
+        // Verify in database
+        const student = await StudentDAO.findByStudentId('TEST001');
+        expect(student?.consented).toBe(false);
+      });
+
+      it('should update consent status when called multiple times', async () => {
+        // First set to true
+        await request(app)
+          .post('/api/consent')
+          .send({ studentId: 'TEST001', consented: true })
+          .expect(200);
+
+        let student = await StudentDAO.findByStudentId('TEST001');
+        expect(student?.consented).toBe(true);
+
+        // Then set to false
+        await request(app)
+          .post('/api/consent')
+          .send({ studentId: 'TEST001', consented: false })
+          .expect(200);
+
+        student = await StudentDAO.findByStudentId('TEST001');
+        expect(student?.consented).toBe(false);
+      });
+
+      it('should perform case-insensitive student ID lookup', async () => {
+        const response = await request(app)
+          .post('/api/consent')
+          .send({ studentId: 'test001', consented: true })
+          .expect(200);
+
+        expect(response.body.success).toBe(true);
+
+        // Verify in database
+        const student = await StudentDAO.findByStudentId('TEST001');
+        expect(student?.consented).toBe(true);
+      });
+
+      it('should handle whitespace in student ID', async () => {
+        const response = await request(app)
+          .post('/api/consent')
+          .send({ studentId: '  TEST001  ', consented: true })
+          .expect(200);
+
+        expect(response.body.success).toBe(true);
+      });
+    });
+
+    describe('Invalid inputs - 400 Bad Request', () => {
+      it('should return 400 when studentId is missing', async () => {
+        const response = await request(app)
+          .post('/api/consent')
+          .send({ consented: true })
+          .expect(400);
+
+        expect(response.body).toEqual({
+          success: false,
+          error: 'Student ID is required',
+          code: 'MISSING_STUDENT_ID'
+        });
+      });
+
+      it('should return 400 when consented field is missing', async () => {
+        const response = await request(app)
+          .post('/api/consent')
+          .send({ studentId: 'TEST001' })
+          .expect(400);
+
+        expect(response.body).toEqual({
+          success: false,
+          error: 'Consented field is required',
+          code: 'MISSING_CONSENTED'
+        });
+      });
+
+      it('should return 400 when studentId is not a string', async () => {
+        const response = await request(app)
+          .post('/api/consent')
+          .send({ studentId: 12345, consented: true })
+          .expect(400);
+
+        expect(response.body.success).toBe(false);
+        expect(response.body.code).toBe('MISSING_STUDENT_ID');
+      });
+
+      it('should return 400 when consented is not a boolean', async () => {
+        const response = await request(app)
+          .post('/api/consent')
+          .send({ studentId: 'TEST001', consented: 'yes' })
+          .expect(400);
+
+        expect(response.body.success).toBe(false);
+        expect(response.body.code).toBe('MISSING_CONSENTED');
+      });
+
+      it('should return 400 when studentId is null', async () => {
+        const response = await request(app)
+          .post('/api/consent')
+          .send({ studentId: null, consented: true })
+          .expect(400);
+
+        expect(response.body.success).toBe(false);
+        expect(response.body.code).toBe('MISSING_STUDENT_ID');
+      });
+
+      it('should return 400 when consented is null', async () => {
+        const response = await request(app)
+          .post('/api/consent')
+          .send({ studentId: 'TEST001', consented: null })
+          .expect(400);
+
+        expect(response.body.success).toBe(false);
+        expect(response.body.code).toBe('MISSING_CONSENTED');
+      });
+
+      it('should return 400 when studentId is empty string', async () => {
+        const response = await request(app)
+          .post('/api/consent')
+          .send({ studentId: '', consented: true })
+          .expect(400);
+
+        expect(response.body.success).toBe(false);
+        expect(response.body.code).toBe('MISSING_STUDENT_ID');
+      });
+    });
+
+    describe('Not found - 404', () => {
+      it('should return 404 when student ID does not exist', async () => {
+        const response = await request(app)
+          .post('/api/consent')
+          .send({ studentId: 'NONEXISTENT', consented: true })
+          .expect(404);
+
+        expect(response.body).toEqual({
+          success: false,
+          error: 'Student ID not found',
+          code: 'STUDENT_NOT_FOUND'
+        });
+      });
     });
   });
 });

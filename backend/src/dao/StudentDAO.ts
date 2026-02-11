@@ -94,6 +94,7 @@ export class StudentDAO {
         tshirt_size as "tshirtSize", 
         meal_preference as "mealPreference", 
         organization_details as "organizationDetails",
+        consented,
         created_at as "createdAt",
         updated_at as "updatedAt"
       FROM students
@@ -124,14 +125,15 @@ export class StudentDAO {
    */
   async upsert(student: Student): Promise<void> {
     const query = `
-      INSERT INTO students (student_id, name, tshirt_size, meal_preference, organization_details, updated_at)
-      VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
+      INSERT INTO students (student_id, name, tshirt_size, meal_preference, organization_details, consented, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
       ON CONFLICT (student_id) 
       DO UPDATE SET
         name = EXCLUDED.name,
         tshirt_size = EXCLUDED.tshirt_size,
         meal_preference = EXCLUDED.meal_preference,
         organization_details = EXCLUDED.organization_details,
+        consented = EXCLUDED.consented,
         updated_at = CURRENT_TIMESTAMP
     `;
     
@@ -140,8 +142,55 @@ export class StudentDAO {
       student.name,
       student.tshirtSize,
       student.mealPreference,
-      student.organizationDetails || null
+      student.organizationDetails || null,
+      student.consented ?? false
     ]);
+  }
+
+  /**
+   * Update consent status for a student
+   */
+  async updateConsent(studentId: string, consented: boolean): Promise<void> {
+    const query = `
+      UPDATE students
+      SET consented = $1, updated_at = CURRENT_TIMESTAMP
+      WHERE LOWER(student_id) = LOWER($2)
+    `;
+    
+    await pool.query(query, [consented, studentId]);
+  }
+
+  /**
+   * Get all students with their claim status
+   * Returns all student records with consent and distribution status
+   */
+  async getAllStudents(): Promise<Array<{
+    studentId: string;
+    name: string;
+    tshirtSize: string;
+    mealPreference: string;
+    shirtCollected: boolean;
+    mealCollected: boolean;
+    consented: boolean;
+    organizationDetails?: string;
+  }>> {
+    const query = `
+      SELECT 
+        s.student_id as "studentId",
+        s.name,
+        COALESCE(s.tshirt_size, '') as "tshirtSize",
+        COALESCE(s.meal_preference, '') as "mealPreference",
+        COALESCE(c.tshirt_claimed, false) as "shirtCollected",
+        COALESCE(c.meal_claimed, false) as "mealCollected",
+        s.consented,
+        s.organization_details as "organizationDetails"
+      FROM students s
+      LEFT JOIN claims c ON s.student_id = c.student_id
+      ORDER BY s.student_id ASC
+    `;
+    
+    const result = await pool.query(query);
+    return result.rows;
   }
 
   /**

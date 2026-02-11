@@ -28,7 +28,7 @@ const corsOptions = {
   origin: process.env.FRONTEND_URL || '*',
   credentials: true,
   optionsSuccessStatus: 200,
-  methods: ['GET', 'POST', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 };
 

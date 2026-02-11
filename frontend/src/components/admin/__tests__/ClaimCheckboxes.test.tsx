@@ -6,7 +6,7 @@ import ClaimCheckboxes from '../ClaimCheckboxes';
 global.fetch = vi.fn();
 
 describe('ClaimCheckboxes', () => {
-  const mockToken = 'test_token_123';
+  const mockStudentId = "1006001";
   const mockOnClaimUpdate = vi.fn();
 
   beforeEach(() => {
@@ -22,7 +22,7 @@ describe('ClaimCheckboxes', () => {
       const claims = { tshirtClaimed: false, mealClaimed: false };
       render(
         <ClaimCheckboxes
-          token={mockToken}
+          studentId="1006001"
           claims={claims}
           onClaimUpdate={mockOnClaimUpdate}
         />
@@ -36,7 +36,7 @@ describe('ClaimCheckboxes', () => {
       const claims = { tshirtClaimed: false, mealClaimed: false };
       render(
         <ClaimCheckboxes
-          token={mockToken}
+          studentId="1006001"
           claims={claims}
           onClaimUpdate={mockOnClaimUpdate}
         />
@@ -49,7 +49,7 @@ describe('ClaimCheckboxes', () => {
       const claims = { tshirtClaimed: false, mealClaimed: false };
       render(
         <ClaimCheckboxes
-          token={mockToken}
+          studentId="1006001"
           claims={claims}
           onClaimUpdate={mockOnClaimUpdate}
         />
@@ -66,7 +66,7 @@ describe('ClaimCheckboxes', () => {
       const claims = { tshirtClaimed: true, mealClaimed: false };
       render(
         <ClaimCheckboxes
-          token={mockToken}
+          studentId="1006001"
           claims={claims}
           onClaimUpdate={mockOnClaimUpdate}
         />
@@ -83,7 +83,7 @@ describe('ClaimCheckboxes', () => {
       const claims = { tshirtClaimed: true, mealClaimed: true };
       render(
         <ClaimCheckboxes
-          token={mockToken}
+          studentId="1006001"
           claims={claims}
           onClaimUpdate={mockOnClaimUpdate}
         />
@@ -98,39 +98,39 @@ describe('ClaimCheckboxes', () => {
   });
 
   describe('Disabled State', () => {
-    it('should disable t-shirt checkbox when already claimed', () => {
+    it('should not disable t-shirt checkbox when already claimed (bidirectional)', () => {
       const claims = { tshirtClaimed: true, mealClaimed: false };
       render(
         <ClaimCheckboxes
-          token={mockToken}
+          studentId="1006001"
           claims={claims}
           onClaimUpdate={mockOnClaimUpdate}
         />
       );
 
       const tshirtCheckbox = screen.getByLabelText(/t-shirt/i) as HTMLInputElement;
-      expect(tshirtCheckbox.disabled).toBe(true);
+      expect(tshirtCheckbox.disabled).toBe(false);
     });
 
-    it('should disable meal checkbox when already claimed', () => {
+    it('should not disable meal checkbox when already claimed (bidirectional)', () => {
       const claims = { tshirtClaimed: false, mealClaimed: true };
       render(
         <ClaimCheckboxes
-          token={mockToken}
+          studentId="1006001"
           claims={claims}
           onClaimUpdate={mockOnClaimUpdate}
         />
       );
 
       const mealCheckbox = screen.getByLabelText(/meal coupon/i) as HTMLInputElement;
-      expect(mealCheckbox.disabled).toBe(true);
+      expect(mealCheckbox.disabled).toBe(false);
     });
 
-    it('should enable unclaimed checkboxes', () => {
+    it('should enable all checkboxes regardless of claim status', () => {
       const claims = { tshirtClaimed: false, mealClaimed: false };
       render(
         <ClaimCheckboxes
-          token={mockToken}
+          studentId="1006001"
           claims={claims}
           onClaimUpdate={mockOnClaimUpdate}
         />
@@ -145,11 +145,11 @@ describe('ClaimCheckboxes', () => {
   });
 
   describe('Claim Submission', () => {
-    it('should call API when t-shirt checkbox is clicked', async () => {
+    it('should call PATCH API when t-shirt checkbox is clicked to check', async () => {
       const claims = { tshirtClaimed: false, mealClaimed: false };
       const mockResponse = {
         success: true,
-        claims: { tshirtClaimed: true, mealClaimed: false }
+        updatedStatus: { tshirtClaimed: true, mealClaimed: false }
       };
 
       (global.fetch as any).mockResolvedValueOnce({
@@ -160,7 +160,7 @@ describe('ClaimCheckboxes', () => {
 
       render(
         <ClaimCheckboxes
-          token={mockToken}
+          studentId="TEST001"
           claims={claims}
           onClaimUpdate={mockOnClaimUpdate}
         />
@@ -170,21 +170,25 @@ describe('ClaimCheckboxes', () => {
       fireEvent.click(tshirtCheckbox);
 
       await waitFor(() => {
-        expect(global.fetch).toHaveBeenCalledWith('/api/claim', {
-          method: 'POST',
+        expect(global.fetch).toHaveBeenCalledWith('/api/distribution-status', {
+          method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ token: mockToken, itemType: 'tshirt' })
+          body: JSON.stringify({ 
+            studentId: 'TEST001', 
+            itemType: 'tshirt', 
+            collected: true 
+          })
         });
       });
     });
 
-    it('should call API when meal checkbox is clicked', async () => {
+    it('should call PATCH API when meal checkbox is clicked to check', async () => {
       const claims = { tshirtClaimed: false, mealClaimed: false };
       const mockResponse = {
         success: true,
-        claims: { tshirtClaimed: false, mealClaimed: true }
+        updatedStatus: { tshirtClaimed: false, mealClaimed: true }
       };
 
       (global.fetch as any).mockResolvedValueOnce({
@@ -195,7 +199,7 @@ describe('ClaimCheckboxes', () => {
 
       render(
         <ClaimCheckboxes
-          token={mockToken}
+          studentId="TEST001"
           claims={claims}
           onClaimUpdate={mockOnClaimUpdate}
         />
@@ -205,22 +209,25 @@ describe('ClaimCheckboxes', () => {
       fireEvent.click(mealCheckbox);
 
       await waitFor(() => {
-        expect(global.fetch).toHaveBeenCalledWith('/api/claim', {
-          method: 'POST',
+        expect(global.fetch).toHaveBeenCalledWith('/api/distribution-status', {
+          method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ token: mockToken, itemType: 'meal' })
+          body: JSON.stringify({ 
+            studentId: 'TEST001', 
+            itemType: 'meal', 
+            collected: true 
+          })
         });
       });
     });
 
-    it('should call onClaimUpdate with updated claims on success', async () => {
-      const claims = { tshirtClaimed: false, mealClaimed: false };
-      const updatedClaims = { tshirtClaimed: true, mealClaimed: false };
+    it('should call PATCH API when t-shirt checkbox is clicked to uncheck', async () => {
+      const claims = { tshirtClaimed: true, mealClaimed: false };
       const mockResponse = {
         success: true,
-        claims: updatedClaims
+        updatedStatus: { tshirtClaimed: false, mealClaimed: false }
       };
 
       (global.fetch as any).mockResolvedValueOnce({
@@ -231,7 +238,86 @@ describe('ClaimCheckboxes', () => {
 
       render(
         <ClaimCheckboxes
-          token={mockToken}
+          studentId="TEST001"
+          claims={claims}
+          onClaimUpdate={mockOnClaimUpdate}
+        />
+      );
+
+      const tshirtCheckbox = screen.getByLabelText(/t-shirt/i);
+      fireEvent.click(tshirtCheckbox);
+
+      await waitFor(() => {
+        expect(global.fetch).toHaveBeenCalledWith('/api/distribution-status', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ 
+            studentId: 'TEST001', 
+            itemType: 'tshirt', 
+            collected: false 
+          })
+        });
+      });
+    });
+
+    it('should call PATCH API when meal checkbox is clicked to uncheck', async () => {
+      const claims = { tshirtClaimed: false, mealClaimed: true };
+      const mockResponse = {
+        success: true,
+        updatedStatus: { tshirtClaimed: false, mealClaimed: false }
+      };
+
+      (global.fetch as any).mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => mockResponse
+      });
+
+      render(
+        <ClaimCheckboxes
+          studentId="TEST001"
+          claims={claims}
+          onClaimUpdate={mockOnClaimUpdate}
+        />
+      );
+
+      const mealCheckbox = screen.getByLabelText(/meal coupon/i);
+      fireEvent.click(mealCheckbox);
+
+      await waitFor(() => {
+        expect(global.fetch).toHaveBeenCalledWith('/api/distribution-status', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ 
+            studentId: 'TEST001', 
+            itemType: 'meal', 
+            collected: false 
+          })
+        });
+      });
+    });
+
+    it('should call onClaimUpdate with updated claims on success', async () => {
+      const claims = { tshirtClaimed: false, mealClaimed: false };
+      const updatedClaims = { tshirtClaimed: true, mealClaimed: false };
+      const mockResponse = {
+        success: true,
+        updatedStatus: updatedClaims
+      };
+
+      (global.fetch as any).mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => mockResponse
+      });
+
+      render(
+        <ClaimCheckboxes
+          studentId="TEST001"
           claims={claims}
           onClaimUpdate={mockOnClaimUpdate}
         />
@@ -245,11 +331,11 @@ describe('ClaimCheckboxes', () => {
       });
     });
 
-    it('should show success message after successful claim', async () => {
+    it('should show success message after successful check', async () => {
       const claims = { tshirtClaimed: false, mealClaimed: false };
       const mockResponse = {
         success: true,
-        claims: { tshirtClaimed: true, mealClaimed: false }
+        updatedStatus: { tshirtClaimed: true, mealClaimed: false }
       };
 
       (global.fetch as any).mockResolvedValueOnce({
@@ -260,7 +346,7 @@ describe('ClaimCheckboxes', () => {
 
       render(
         <ClaimCheckboxes
-          token={mockToken}
+          studentId="TEST001"
           claims={claims}
           onClaimUpdate={mockOnClaimUpdate}
         />
@@ -270,48 +356,26 @@ describe('ClaimCheckboxes', () => {
       fireEvent.click(tshirtCheckbox);
 
       await waitFor(() => {
-        expect(screen.getByText(/t-shirt claimed successfully/i)).toBeInTheDocument();
+        expect(screen.getByText(/t-shirt marked as collected successfully/i)).toBeInTheDocument();
       });
     });
 
-    it('should not call API when clicking already claimed checkbox', async () => {
+    it('should show success message after successful uncheck', async () => {
       const claims = { tshirtClaimed: true, mealClaimed: false };
-
-      render(
-        <ClaimCheckboxes
-          token={mockToken}
-          claims={claims}
-          onClaimUpdate={mockOnClaimUpdate}
-        />
-      );
-
-      const tshirtCheckbox = screen.getByLabelText(/t-shirt/i);
-      fireEvent.click(tshirtCheckbox);
-
-      // Wait a bit to ensure no API call is made
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      expect(global.fetch).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('Error Handling', () => {
-    it('should display error message on 409 conflict', async () => {
-      const claims = { tshirtClaimed: false, mealClaimed: false };
       const mockResponse = {
-        success: false,
-        error: 'Item already claimed'
+        success: true,
+        updatedStatus: { tshirtClaimed: false, mealClaimed: false }
       };
 
       (global.fetch as any).mockResolvedValueOnce({
-        ok: false,
-        status: 409,
+        ok: true,
+        status: 200,
         json: async () => mockResponse
       });
 
       render(
         <ClaimCheckboxes
-          token={mockToken}
+          studentId="TEST001"
           claims={claims}
           onClaimUpdate={mockOnClaimUpdate}
         />
@@ -321,15 +385,58 @@ describe('ClaimCheckboxes', () => {
       fireEvent.click(tshirtCheckbox);
 
       await waitFor(() => {
-        expect(screen.getByText(/this item has already been claimed/i)).toBeInTheDocument();
+        expect(screen.getByText(/t-shirt unmarked successfully/i)).toBeInTheDocument();
       });
     });
 
+    it('should update UI state immediately (optimistic update)', async () => {
+      const claims = { tshirtClaimed: false, mealClaimed: false };
+      
+      // Create a delayed promise to test optimistic update
+      let resolvePromise: any;
+      const promise = new Promise((resolve) => {
+        resolvePromise = resolve;
+      });
+
+      (global.fetch as any).mockReturnValueOnce(promise);
+
+      render(
+        <ClaimCheckboxes
+          studentId="TEST001"
+          claims={claims}
+          onClaimUpdate={mockOnClaimUpdate}
+        />
+      );
+
+      const tshirtCheckbox = screen.getByLabelText(/t-shirt/i);
+      fireEvent.click(tshirtCheckbox);
+
+      // Check that onClaimUpdate was called immediately (optimistic update)
+      await waitFor(() => {
+        expect(mockOnClaimUpdate).toHaveBeenCalledWith({
+          tshirtClaimed: true,
+          mealClaimed: false
+        });
+      });
+
+      // Resolve the promise
+      resolvePromise({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          success: true,
+          updatedStatus: { tshirtClaimed: true, mealClaimed: false }
+        })
+      });
+    });
+  });
+
+  describe('Error Handling', () => {
     it('should display error message on 404 not found', async () => {
       const claims = { tshirtClaimed: false, mealClaimed: false };
       const mockResponse = {
         success: false,
-        error: 'Invalid QR code'
+        error: 'Student not found'
       };
 
       (global.fetch as any).mockResolvedValueOnce({
@@ -340,7 +447,7 @@ describe('ClaimCheckboxes', () => {
 
       render(
         <ClaimCheckboxes
-          token={mockToken}
+          studentId="TEST001"
           claims={claims}
           onClaimUpdate={mockOnClaimUpdate}
         />
@@ -350,7 +457,7 @@ describe('ClaimCheckboxes', () => {
       fireEvent.click(tshirtCheckbox);
 
       await waitFor(() => {
-        expect(screen.getByText(/invalid qr code/i)).toBeInTheDocument();
+        expect(screen.getByText(/student not found/i)).toBeInTheDocument();
       });
     });
 
@@ -369,7 +476,7 @@ describe('ClaimCheckboxes', () => {
 
       render(
         <ClaimCheckboxes
-          token={mockToken}
+          studentId="TEST001"
           claims={claims}
           onClaimUpdate={mockOnClaimUpdate}
         />
@@ -386,12 +493,11 @@ describe('ClaimCheckboxes', () => {
     it('should display network error on fetch failure', async () => {
       const claims = { tshirtClaimed: false, mealClaimed: false };
 
-      // Mock fetch to fail all retries
       (global.fetch as any).mockRejectedValue(new TypeError('fetch failed'));
 
       render(
         <ClaimCheckboxes
-          token={mockToken}
+          studentId="TEST001"
           claims={claims}
           onClaimUpdate={mockOnClaimUpdate}
         />
@@ -400,10 +506,39 @@ describe('ClaimCheckboxes', () => {
       const tshirtCheckbox = screen.getByLabelText(/t-shirt/i);
       fireEvent.click(tshirtCheckbox);
 
-      // Wait for error to appear (after retries complete)
       await waitFor(() => {
         expect(screen.getByText(/network error/i)).toBeInTheDocument();
-      }, { timeout: 10000 });
+      });
+    });
+
+    it('should revert optimistic update on error', async () => {
+      const claims = { tshirtClaimed: false, mealClaimed: false };
+
+      (global.fetch as any).mockRejectedValue(new Error('Network error'));
+
+      render(
+        <ClaimCheckboxes
+          studentId="TEST001"
+          claims={claims}
+          onClaimUpdate={mockOnClaimUpdate}
+        />
+      );
+
+      const tshirtCheckbox = screen.getByLabelText(/t-shirt/i);
+      fireEvent.click(tshirtCheckbox);
+
+      // First call is optimistic update
+      await waitFor(() => {
+        expect(mockOnClaimUpdate).toHaveBeenCalledWith({
+          tshirtClaimed: true,
+          mealClaimed: false
+        });
+      });
+
+      // Second call reverts on error
+      await waitFor(() => {
+        expect(mockOnClaimUpdate).toHaveBeenCalledWith(claims);
+      });
     });
 
     it('should allow dismissing error messages', async () => {
@@ -421,7 +556,7 @@ describe('ClaimCheckboxes', () => {
 
       render(
         <ClaimCheckboxes
-          token={mockToken}
+          studentId="TEST001"
           claims={claims}
           onClaimUpdate={mockOnClaimUpdate}
         />
@@ -458,7 +593,7 @@ describe('ClaimCheckboxes', () => {
 
       render(
         <ClaimCheckboxes
-          token={mockToken}
+          studentId="TEST001"
           claims={claims}
           onClaimUpdate={mockOnClaimUpdate}
         />
@@ -479,7 +614,7 @@ describe('ClaimCheckboxes', () => {
         status: 200,
         json: async () => ({
           success: true,
-          claims: { tshirtClaimed: true, mealClaimed: false }
+          updatedStatus: { tshirtClaimed: true, mealClaimed: false }
         })
       });
     });
@@ -496,7 +631,7 @@ describe('ClaimCheckboxes', () => {
 
       render(
         <ClaimCheckboxes
-          token={mockToken}
+          studentId="TEST001"
           claims={claims}
           onClaimUpdate={mockOnClaimUpdate}
         />
@@ -515,7 +650,7 @@ describe('ClaimCheckboxes', () => {
         status: 200,
         json: async () => ({
           success: true,
-          claims: { tshirtClaimed: true, mealClaimed: false }
+          updatedStatus: { tshirtClaimed: true, mealClaimed: false }
         })
       });
     });
@@ -526,7 +661,7 @@ describe('ClaimCheckboxes', () => {
       const claims = { tshirtClaimed: false, mealClaimed: false };
       render(
         <ClaimCheckboxes
-          token={mockToken}
+          studentId="TEST001"
           claims={claims}
           onClaimUpdate={mockOnClaimUpdate}
         />
@@ -540,7 +675,7 @@ describe('ClaimCheckboxes', () => {
       const claims = { tshirtClaimed: false, mealClaimed: false };
       const mockResponse = {
         success: true,
-        claims: { tshirtClaimed: true, mealClaimed: false }
+        updatedStatus: { tshirtClaimed: true, mealClaimed: false }
       };
 
       (global.fetch as any).mockResolvedValueOnce({
@@ -551,7 +686,7 @@ describe('ClaimCheckboxes', () => {
 
       render(
         <ClaimCheckboxes
-          token={mockToken}
+          studentId="TEST001"
           claims={claims}
           onClaimUpdate={mockOnClaimUpdate}
         />

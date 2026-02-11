@@ -9,7 +9,8 @@
     "start": "node dist/index.js",
     "test": "vitest --run",
     "migrate": "ts-node src/db/migrate.ts",
-    "db:check": "NODE_ENV=test ts-node src/db/check-connection.ts"
+    "db:check": "NODE_ENV=test ts-node src/db/check-connection.ts",
+    "import-csv": "ts-node src/scripts/reimport-csv.ts"
   },
   "keywords": [],
   "author": "",

@@ -3,6 +3,31 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import AdminApp from '../AdminApp';
 
+// Mock AdminLogin component
+vi.mock('../AdminLogin', () => ({
+  default: ({ onLoginSuccess }: any) => {
+    // Store callback in window for test access
+    (window as any).mockLoginSuccess = onLoginSuccess;
+    
+    return (
+      <div data-testid="admin-login">
+        <button onClick={onLoginSuccess} data-testid="login-button">
+          Login
+        </button>
+      </div>
+    );
+  }
+}));
+
+// Mock DatabaseTableView component
+vi.mock('../DatabaseTableView', () => ({
+  default: () => (
+    <div data-testid="database-table-view">
+      Database View
+    </div>
+  )
+}));
+
 // Mock the child components with more realistic behavior
 vi.mock('../QRScanner', () => ({
   default: ({ onScanSuccess, onScanError }: any) => {
@@ -29,19 +54,6 @@ vi.mock('../StudentInfoCard', () => ({
   )
 }));
 
-vi.mock('../ClaimStatusDisplay', () => ({
-  default: ({ claims }: any) => (
-    <div data-testid="claim-status-display">
-      <div data-testid="tshirt-status">
-        {claims.tshirtClaimed ? 'T-Shirt Claimed' : 'T-Shirt Available'}
-      </div>
-      <div data-testid="meal-status">
-        {claims.mealClaimed ? 'Meal Claimed' : 'Meal Available'}
-      </div>
-    </div>
-  )
-}));
-
 vi.mock('../ClaimCheckboxes', () => ({
   default: ({ claims, onClaimUpdate }: any) => {
     // Store callback in window for test access
@@ -49,6 +61,14 @@ vi.mock('../ClaimCheckboxes', () => ({
     
     return (
       <div data-testid="claim-checkboxes">
+        <div data-testid="claim-status">
+          <div data-testid="tshirt-status">
+            {claims.tshirtClaimed ? 'T-Shirt Claimed' : 'T-Shirt Available'}
+          </div>
+          <div data-testid="meal-status">
+            {claims.mealClaimed ? 'Meal Claimed' : 'Meal Available'}
+          </div>
+        </div>
         <label>
           <input
             type="checkbox"
@@ -90,12 +110,30 @@ describe('AdminApp Integration Tests', () => {
     delete (window as any).mockScanSuccess;
     delete (window as any).mockScanError;
     delete (window as any).mockClaimUpdate;
+    delete (window as any).mockLoginSuccess;
   });
+
+  // Helper function to login before each test
+  const loginAsAdmin = async () => {
+    const user = userEvent.setup();
+    
+    // Click login button
+    const loginButton = screen.getByTestId('login-button');
+    await user.click(loginButton);
+    
+    // Wait for login to complete
+    await waitFor(() => {
+      expect(screen.queryByTestId('admin-login')).not.toBeInTheDocument();
+    });
+  };
 
   describe('Complete Check-in Flow', () => {
     it('completes full check-in flow: scan -> view info -> claim items -> scan another', async () => {
       const user = userEvent.setup();
       render(<AdminApp />);
+
+      // Step 0: Login first
+      await loginAsAdmin();
 
       // Step 1: Initial state - scanner is visible
       expect(screen.getByTestId('qr-scanner')).toBeInTheDocument();
@@ -165,6 +203,9 @@ describe('AdminApp Integration Tests', () => {
     it('handles student with partial claims correctly', async () => {
       render(<AdminApp />);
 
+      // Login first
+      await loginAsAdmin();
+
       // Scan a student who already claimed t-shirt
       const mockScanData = {
         success: true,
@@ -203,6 +244,9 @@ describe('AdminApp Integration Tests', () => {
 
     it('handles student with all items already claimed', async () => {
       render(<AdminApp />);
+
+      // Login first
+      await loginAsAdmin();
 
       // Scan a student who already claimed everything
       const mockScanData = {
@@ -244,6 +288,9 @@ describe('AdminApp Integration Tests', () => {
     it('handles invalid QR code scan gracefully', async () => {
       render(<AdminApp />);
 
+      // Login first
+      await loginAsAdmin();
+
       // Simulate invalid QR code
       (window as any).mockScanError('Invalid QR code');
 
@@ -260,6 +307,9 @@ describe('AdminApp Integration Tests', () => {
     it('handles camera permission denied error', async () => {
       render(<AdminApp />);
 
+      // Login first
+      await loginAsAdmin();
+
       // Simulate camera permission error
       (window as any).mockScanError('Camera permission denied. Please enable camera access to scan QR codes.');
 
@@ -271,6 +321,9 @@ describe('AdminApp Integration Tests', () => {
 
     it('allows recovery from error by scanning successfully', async () => {
       render(<AdminApp />);
+
+      // Login first
+      await loginAsAdmin();
 
       // First, trigger an error
       (window as any).mockScanError('Network error');
@@ -306,6 +359,9 @@ describe('AdminApp Integration Tests', () => {
       const user = userEvent.setup();
       render(<AdminApp />);
 
+      // Login first
+      await loginAsAdmin();
+
       // Trigger an error
       (window as any).mockScanError('Test error message');
 
@@ -324,6 +380,9 @@ describe('AdminApp Integration Tests', () => {
 
     it('clears previous errors when scanning new student', async () => {
       render(<AdminApp />);
+
+      // Login first
+      await loginAsAdmin();
 
       // First scan with error
       (window as any).mockScanError('First error');
@@ -345,6 +404,9 @@ describe('AdminApp Integration Tests', () => {
   describe('Scan Counter', () => {
     it('increments counter for each successful scan', async () => {
       render(<AdminApp />);
+
+      // Login first
+      await loginAsAdmin();
 
       // Initially no counter
       expect(screen.queryByText(/scans today/i)).not.toBeInTheDocument();
@@ -370,6 +432,9 @@ describe('AdminApp Integration Tests', () => {
     it('does not increment counter for failed scans', async () => {
       render(<AdminApp />);
 
+      // Login first
+      await loginAsAdmin();
+
       // Trigger error
       (window as any).mockScanError('Scan failed');
 
@@ -384,6 +449,9 @@ describe('AdminApp Integration Tests', () => {
     it('maintains counter across multiple scan sessions', async () => {
       const user = userEvent.setup();
       render(<AdminApp />);
+
+      // Login first
+      await loginAsAdmin();
 
       // First scan
       (window as any).mockScanSuccess({
@@ -425,17 +493,22 @@ describe('AdminApp Integration Tests', () => {
   });
 
   describe('UI State Management', () => {
-    it('shows correct UI elements in scanner mode', () => {
+    it('shows correct UI elements in scanner mode', async () => {
       render(<AdminApp />);
 
-      expect(screen.getByText('Event Check-In')).toBeInTheDocument();
-      expect(screen.getByText('Open House 2026')).toBeInTheDocument();
+      // Login first
+      await loginAsAdmin();
+
+      expect(screen.getByText('SUTD Open House 2026')).toBeInTheDocument();
       expect(screen.getByTestId('qr-scanner')).toBeInTheDocument();
       expect(screen.getByText('Need help? Contact event staff')).toBeInTheDocument();
     });
 
     it('shows correct UI elements in student info mode', async () => {
       render(<AdminApp />);
+
+      // Login first
+      await loginAsAdmin();
 
       (window as any).mockScanSuccess({
         success: true,
@@ -450,7 +523,6 @@ describe('AdminApp Integration Tests', () => {
 
       await waitFor(() => {
         expect(screen.getByTestId('student-info-card')).toBeInTheDocument();
-        expect(screen.getByTestId('claim-status-display')).toBeInTheDocument();
         expect(screen.getByTestId('claim-checkboxes')).toBeInTheDocument();
         expect(screen.getByText('Scan Another Student')).toBeInTheDocument();
       });
@@ -463,8 +535,11 @@ describe('AdminApp Integration Tests', () => {
       const user = userEvent.setup();
       render(<AdminApp />);
 
+      // Login first
+      await loginAsAdmin();
+
       // Check in scanner mode
-      expect(screen.getByText('Event Check-In')).toBeInTheDocument();
+      expect(screen.getByText('SUTD Open House 2026')).toBeInTheDocument();
       expect(screen.getByText('Need help? Contact event staff')).toBeInTheDocument();
 
       // Scan a student
@@ -484,7 +559,7 @@ describe('AdminApp Integration Tests', () => {
       });
 
       // Check in student info mode
-      expect(screen.getByText('Event Check-In')).toBeInTheDocument();
+      expect(screen.getByText('SUTD Open House 2026')).toBeInTheDocument();
       expect(screen.getByText('Need help? Contact event staff')).toBeInTheDocument();
 
       // Go back to scanner
@@ -495,7 +570,7 @@ describe('AdminApp Integration Tests', () => {
       });
 
       // Check header and footer still present
-      expect(screen.getByText('Event Check-In')).toBeInTheDocument();
+      expect(screen.getByText('SUTD Open House 2026')).toBeInTheDocument();
       expect(screen.getByText('Need help? Contact event staff')).toBeInTheDocument();
     });
   });
@@ -503,6 +578,9 @@ describe('AdminApp Integration Tests', () => {
   describe('Edge Cases', () => {
     it('handles rapid successive scans', async () => {
       render(<AdminApp />);
+
+      // Login first
+      await loginAsAdmin();
 
       // Scan first student
       (window as any).mockScanSuccess({
@@ -542,6 +620,9 @@ describe('AdminApp Integration Tests', () => {
     it('handles scan with missing optional fields', async () => {
       render(<AdminApp />);
 
+      // Login first
+      await loginAsAdmin();
+
       // Scan with minimal data (no involvements)
       (window as any).mockScanSuccess({
         success: true,
@@ -562,6 +643,9 @@ describe('AdminApp Integration Tests', () => {
 
     it('handles empty error message gracefully', async () => {
       render(<AdminApp />);
+
+      // Login first
+      await loginAsAdmin();
 
       // Trigger error with empty message - AdminApp should still handle it
       (window as any).mockScanError('');

@@ -4,6 +4,9 @@ import StartupImport from './services/StartupImport';
 import validateRouter from './routes/validate';
 import scanRouter from './routes/scan';
 import claimRouter from './routes/claim';
+import consentRouter from './routes/consent';
+import distributionStatusRouter from './routes/distribution-status';
+import studentsRouter from './routes/students';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { requestLogger } from './middleware/logger';
 
@@ -32,26 +35,27 @@ app.get('/health', (req, res) => {
 app.use('/api', validateRouter);
 app.use('/api', scanRouter);
 app.use('/api', claimRouter);
+app.use('/api', consentRouter);
+app.use('/api', distributionStatusRouter);
+app.use('/api', studentsRouter);
 
 // Error handling middleware (must be last)
 app.use(notFoundHandler);
 app.use(errorHandler);
 
 /**
- * Start the server with CSV import
+ * Start the server
  */
 async function startServer() {
   try {
-    // Import CSV data on startup
-    await StartupImport.importCSVOnStartup();
-
-    // Start the server only if import succeeds
+    // Start the server
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
+      console.log('Note: CSV import is no longer automatic. Use npm run reimport-csv if needed.');
     });
   } catch (error) {
     console.error('Failed to start server:', error instanceof Error ? error.message : error);
-    process.exit(1); // Exit with error code to prevent startup
+    process.exit(1);
   }
 }
 

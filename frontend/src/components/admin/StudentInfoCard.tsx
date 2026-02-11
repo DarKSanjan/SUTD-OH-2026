@@ -58,7 +58,7 @@ export default function StudentInfoCard({ student }: StudentInfoCardProps) {
         }
 
         .card-header {
-          background: linear-gradient(135deg, #E63946 0%, #C1121F 100%);
+          background: #53001b;
           padding: 24px 20px;
           color: white;
         }

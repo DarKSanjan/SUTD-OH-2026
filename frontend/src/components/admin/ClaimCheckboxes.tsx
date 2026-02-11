@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import ErrorMessage from '../shared/ErrorMessage';
-import { apiPost, getErrorMessage } from '../../services/api';
+import { getErrorMessage } from '../../services/api';
 
 interface ClaimStatus {
   tshirtClaimed: boolean;
@@ -8,18 +8,21 @@ interface ClaimStatus {
 }
 
 interface ClaimCheckboxesProps {
-  token: string;
+  studentId: string;
   claims: ClaimStatus;
   onClaimUpdate: (updatedClaims: ClaimStatus) => void;
 }
 
-interface ClaimResponse {
+interface DistributionStatusResponse {
   success: boolean;
-  claims?: ClaimStatus;
+  updatedStatus?: {
+    tshirtClaimed: boolean;
+    mealClaimed: boolean;
+  };
   error?: string;
 }
 
-export default function ClaimCheckboxes({ token, claims, onClaimUpdate }: ClaimCheckboxesProps) {
+export default function ClaimCheckboxes({ studentId, claims, onClaimUpdate }: ClaimCheckboxesProps) {
   const [isLoading, setIsLoading] = useState<{ tshirt: boolean; meal: boolean }>({
     tshirt: false,
     meal: false,
@@ -28,11 +31,6 @@ export default function ClaimCheckboxes({ token, claims, onClaimUpdate }: ClaimC
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const handleClaimChange = async (itemType: 'tshirt' | 'meal', currentlyChecked: boolean) => {
-    // Don't allow unchecking (claims are permanent)
-    if (currentlyChecked) {
-      return;
-    }
-
     // Clear previous messages
     setError(null);
     setSuccessMessage(null);
@@ -40,16 +38,43 @@ export default function ClaimCheckboxes({ token, claims, onClaimUpdate }: ClaimC
     // Set loading state for this specific item
     setIsLoading(prev => ({ ...prev, [itemType]: true }));
 
-    try {
-      const data = await apiPost<ClaimResponse>('/api/claim', { token, itemType });
+    // Optimistically update UI
+    const newStatus = !currentlyChecked;
+    const optimisticClaims = {
+      ...claims,
+      [itemType === 'tshirt' ? 'tshirtClaimed' : 'mealClaimed']: newStatus
+    };
+    onClaimUpdate(optimisticClaims);
 
-      if (data.success && data.claims) {
-        // Update parent component with new claim status
-        onClaimUpdate(data.claims);
+    try {
+      // Call PATCH /api/distribution-status
+      const response = await fetch('/api/distribution-status', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          studentId,
+          itemType,
+          collected: newStatus
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
+
+      const data: DistributionStatusResponse = await response.json();
+
+      if (data.success && data.updatedStatus) {
+        // Update parent component with confirmed status from server
+        onClaimUpdate(data.updatedStatus);
         
         // Show success message
         const itemName = itemType === 'tshirt' ? 'T-Shirt' : 'Meal Coupon';
-        setSuccessMessage(`✓ ${itemName} claimed successfully!`);
+        const action = newStatus ? 'marked as collected' : 'unmarked';
+        setSuccessMessage(`✓ ${itemName} ${action} successfully!`);
         
         // Auto-dismiss success message after 3 seconds
         setTimeout(() => {
@@ -57,13 +82,14 @@ export default function ClaimCheckboxes({ token, claims, onClaimUpdate }: ClaimC
         }, 3000);
       }
     } catch (err: any) {
-      console.error('Error recording claim:', err);
+      console.error('Error updating distribution status:', err);
+      
+      // Revert optimistic update on error
+      onClaimUpdate(claims);
       
       // Handle different error cases
-      if (err.status === 409) {
-        setError('This item has already been claimed.');
-      } else if (err.status === 404) {
-        setError('Invalid QR code. Please scan again.');
+      if (err.message?.includes('404') || err.message?.includes('not found')) {
+        setError('Student not found. Please scan again.');
       } else {
         setError(getErrorMessage(err));
       }
@@ -100,7 +126,7 @@ export default function ClaimCheckboxes({ token, claims, onClaimUpdate }: ClaimC
             type="checkbox"
             id="tshirt-checkbox"
             checked={claims.tshirtClaimed}
-            disabled={claims.tshirtClaimed || isLoading.tshirt}
+            disabled={isLoading.tshirt}
             onChange={() => handleClaimChange('tshirt', claims.tshirtClaimed)}
             className="checkbox-input"
           />
@@ -119,7 +145,7 @@ export default function ClaimCheckboxes({ token, claims, onClaimUpdate }: ClaimC
             type="checkbox"
             id="meal-checkbox"
             checked={claims.mealClaimed}
-            disabled={claims.mealClaimed || isLoading.meal}
+            disabled={isLoading.meal}
             onChange={() => handleClaimChange('meal', claims.mealClaimed)}
             className="checkbox-input"
           />
@@ -138,7 +164,7 @@ export default function ClaimCheckboxes({ token, claims, onClaimUpdate }: ClaimC
         }
 
         .checkboxes-title {
-          color: #333;
+          color: white;
           font-size: 18px;
           margin-bottom: 16px;
           font-weight: 700;
@@ -191,7 +217,7 @@ export default function ClaimCheckboxes({ token, claims, onClaimUpdate }: ClaimC
           position: relative;
         }
 
-        .checkbox-item:not(.claimed):not(.loading):hover {
+        .checkbox-item:not(.loading):hover {
           border-color: #667eea;
           background: #f8f9ff;
           transform: translateY(-2px);
@@ -201,7 +227,6 @@ export default function ClaimCheckboxes({ token, claims, onClaimUpdate }: ClaimC
         .checkbox-item.claimed {
           background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
           border-color: #28a745;
-          cursor: not-allowed;
         }
 
         .checkbox-item.loading {
@@ -228,7 +253,7 @@ export default function ClaimCheckboxes({ token, claims, onClaimUpdate }: ClaimC
           background: white;
         }
 
-        .checkbox-item:not(.claimed):not(.loading):hover .checkbox-custom {
+        .checkbox-item:not(.loading):hover .checkbox-custom {
           border-color: #667eea;
         }
 
@@ -388,7 +413,7 @@ export default function ClaimCheckboxes({ token, claims, onClaimUpdate }: ClaimC
 
         /* Hover effects for desktop only */
         @media (hover: hover) {
-          .checkbox-item:not(.claimed):not(.loading):active {
+          .checkbox-item:not(.loading):active {
             transform: translateY(0);
           }
         }

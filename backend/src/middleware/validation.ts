@@ -184,5 +184,42 @@ export const validationSchemas = {
       errorCode: 'INVALID_ITEM_TYPE',
       errorMessage: 'Item type must be "tshirt" or "meal"'
     }
+  },
+  recordConsent: {
+    studentId: {
+      type: 'string' as const,
+      required: true,
+      minLength: 1,
+      errorCode: 'MISSING_STUDENT_ID',
+      errorMessage: 'Student ID is required'
+    },
+    consented: {
+      type: 'boolean' as const,
+      required: true,
+      errorCode: 'MISSING_CONSENTED',
+      errorMessage: 'Consented field is required'
+    }
+  },
+  updateDistributionStatus: {
+    studentId: {
+      type: 'string' as const,
+      required: true,
+      minLength: 1,
+      errorCode: 'MISSING_STUDENT_ID',
+      errorMessage: 'Student ID is required'
+    },
+    itemType: {
+      type: 'string' as const,
+      required: true,
+      enum: ['tshirt', 'meal'],
+      errorCode: 'INVALID_ITEM_TYPE',
+      errorMessage: 'Item type must be "tshirt" or "meal"'
+    },
+    collected: {
+      type: 'boolean' as const,
+      required: true,
+      errorCode: 'MISSING_COLLECTED',
+      errorMessage: 'Collected field is required'
+    }
   }
 };

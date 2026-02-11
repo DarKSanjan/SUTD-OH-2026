@@ -76,7 +76,7 @@ describe('QRCodeDisplay', () => {
     expect(screen.getByText(/Show this QR code at the event to claim your items/i)).toBeInTheDocument();
   });
 
-  it('should render "Generate New QR Code" button when onGenerateNew is provided', () => {
+  it('should render "Start Over" button when onGenerateNew is provided', () => {
     const mockOnGenerateNew = vi.fn();
 
     render(
@@ -87,11 +87,11 @@ describe('QRCodeDisplay', () => {
       />
     );
 
-    const button = screen.getByRole('button', { name: /Generate New QR Code/i });
+    const button = screen.getByRole('button', { name: /Start Over/i });
     expect(button).toBeInTheDocument();
   });
 
-  it('should not render "Generate New QR Code" button when onGenerateNew is not provided', () => {
+  it('should not render "Start Over" button when onGenerateNew is not provided', () => {
     render(
       <QRCodeDisplay
         qrCode={mockQRCode}
@@ -99,7 +99,7 @@ describe('QRCodeDisplay', () => {
       />
     );
 
-    const button = screen.queryByRole('button', { name: /Generate New QR Code/i });
+    const button = screen.queryByRole('button', { name: /Start Over/i });
     expect(button).not.toBeInTheDocument();
   });
 
@@ -114,7 +114,7 @@ describe('QRCodeDisplay', () => {
       />
     );
 
-    const button = screen.getByRole('button', { name: /Generate New QR Code/i });
+    const button = screen.getByRole('button', { name: /Start Over/i });
     fireEvent.click(button);
 
     expect(mockOnGenerateNew).toHaveBeenCalledTimes(1);
@@ -209,5 +209,98 @@ describe('QRCodeDisplay', () => {
     );
 
     expect(screen.queryByText('Organization Involvements')).not.toBeInTheDocument();
+  });
+
+  it('should display collection status section', () => {
+    render(
+      <QRCodeDisplay
+        qrCode={mockQRCode}
+        student={mockStudent}
+        shirtCollected={false}
+        mealCollected={false}
+      />
+    );
+
+    expect(screen.getByText('Collection Status')).toBeInTheDocument();
+    expect(screen.getByText('Shirt Collected')).toBeInTheDocument();
+    expect(screen.getByText('Meal Collected')).toBeInTheDocument();
+  });
+
+  it('should display checkmark when shirt is collected', () => {
+    const { container } = render(
+      <QRCodeDisplay
+        qrCode={mockQRCode}
+        student={mockStudent}
+        shirtCollected={true}
+        mealCollected={false}
+      />
+    );
+
+    const statusIcons = container.querySelectorAll('.status-icon');
+    // First status item should be shirt (✓), second should be meal (✗)
+    expect(statusIcons[0]).toHaveTextContent('✓');
+    expect(statusIcons[1]).toHaveTextContent('✗');
+  });
+
+  it('should display checkmark when meal is collected', () => {
+    const { container } = render(
+      <QRCodeDisplay
+        qrCode={mockQRCode}
+        student={mockStudent}
+        shirtCollected={false}
+        mealCollected={true}
+      />
+    );
+
+    const statusIcons = container.querySelectorAll('.status-icon');
+    // First status item should be shirt (✗), second should be meal (✓)
+    expect(statusIcons[0]).toHaveTextContent('✗');
+    expect(statusIcons[1]).toHaveTextContent('✓');
+  });
+
+  it('should display checkmarks when both items are collected', () => {
+    const { container } = render(
+      <QRCodeDisplay
+        qrCode={mockQRCode}
+        student={mockStudent}
+        shirtCollected={true}
+        mealCollected={true}
+      />
+    );
+
+    const statusIcons = container.querySelectorAll('.status-icon');
+    // Both should show checkmarks
+    expect(statusIcons[0]).toHaveTextContent('✓');
+    expect(statusIcons[1]).toHaveTextContent('✓');
+  });
+
+  it('should display X marks when no items are collected', () => {
+    const { container } = render(
+      <QRCodeDisplay
+        qrCode={mockQRCode}
+        student={mockStudent}
+        shirtCollected={false}
+        mealCollected={false}
+      />
+    );
+
+    const statusIcons = container.querySelectorAll('.status-icon');
+    // Both should show X marks
+    expect(statusIcons[0]).toHaveTextContent('✗');
+    expect(statusIcons[1]).toHaveTextContent('✗');
+  });
+
+  it('should default to false for collection status when not provided', () => {
+    const { container } = render(
+      <QRCodeDisplay
+        qrCode={mockQRCode}
+        student={mockStudent}
+      />
+    );
+
+    const statusIcons = container.querySelectorAll('.status-icon');
+    // Both should default to X marks (not collected)
+    expect(statusIcons[0]).toHaveTextContent('✗');
+    expect(statusIcons[1]).toHaveTextContent('✗');
   });
 });

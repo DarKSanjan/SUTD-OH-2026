@@ -31,6 +31,19 @@ export class ClaimService {
     // The DAO handles duplicate checking and atomic transactions
     return await ClaimDAO.updateClaim(studentId, itemType);
   }
+
+  /**
+   * Update distribution status for a student (bidirectional)
+   * Supports both checking and unchecking status
+   * Returns the updated claim status
+   */
+  async updateDistributionStatus(
+    studentId: string, 
+    itemType: 'tshirt' | 'meal', 
+    collected: boolean
+  ): Promise<Claim> {
+    return await ClaimDAO.updateDistributionStatus(studentId, itemType, collected);
+  }
 }
 
 export default new ClaimService();

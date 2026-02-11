@@ -29,10 +29,16 @@ NODE_ENV=development
 PORT=3000
 ```
 
-5. Run migrations:
+5. Run migrations to create tables:
 
 ```bash
 npm run migrate
+```
+
+6. Import CSV data (one-time setup):
+
+```bash
+npm run import-csv
 ```
 
 ### Option 2: Local PostgreSQL
@@ -56,6 +62,12 @@ PORT=3000
 
 ```bash
 npm run migrate
+```
+
+5. Import CSV data:
+
+```bash
+npm run import-csv
 ```
 
 ## Running the Server
@@ -163,7 +175,8 @@ backend/
 - `npm run build` - Build TypeScript to JavaScript
 - `npm start` - Start production server
 - `npm test` - Run all tests
-- `npm run migrate` - Run database migrations
+- `npm run migrate` - Run database migrations (creates tables)
+- `npm run import-csv` - Import student data from CSV file
 - `npm run db:check` - Check database connection
 
 ## Environment Variables

@@ -17,7 +17,7 @@ async function reimportCSV() {
     console.log('✓ Cleared students table');
     
     // Import CSV with new logic
-    const csvPath = path.join(__dirname, '../../Open House 2026 Student Organisations Involvement 1.csv');
+    const csvPath = path.join(__dirname, '../../Open House 2026 Student Organisations Involvement.csv');
     console.log(`📂 Importing from: ${csvPath}`);
     
     const count = await StudentDAO.importFromCSV(csvPath);

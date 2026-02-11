@@ -68,7 +68,8 @@ export class CSVParser {
 
         // For duplicate entries (multiple involvements), shirt size and food may be empty
         // We'll handle this during consolidation
-        const shirtSize = record['Shirt Size'] || '';
+        // Try both "Shirt Size" and "Shirt Size2" column names
+        const shirtSize = record['Shirt Size2'] || record['Shirt Size'] || '';
         const food = record['Food'] || '';
         
         // Create student record (duplicates will be handled by StudentDAO)

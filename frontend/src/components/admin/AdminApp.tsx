@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import QRScanner from './QRScanner';
 import StudentInfoCard from './StudentInfoCard';
-import ClaimStatusDisplay from './ClaimStatusDisplay';
 import ClaimCheckboxes from './ClaimCheckboxes';
+import DatabaseTableView from './DatabaseTableView';
 import ErrorMessage from '../shared/ErrorMessage';
+import AdminLogin from './AdminLogin';
 
 interface StudentData {
   studentId: string;
@@ -26,6 +27,7 @@ interface ScanResponse {
 }
 
 export default function AdminApp() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [scannedData, setScannedData] = useState<{
     student: StudentData;
     claims: ClaimStatus;
@@ -33,7 +35,16 @@ export default function AdminApp() {
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [scanCount, setScanCount] = useState(0);
+  const [activeTab, setActiveTab] = useState<'scanner' | 'database'>('scanner');
 
+  const handleLoginSuccess = () => {
+    setIsAuthenticated(true);
+  };
+
+  // Show login screen if not authenticated
+  if (!isAuthenticated) {
+    return <AdminLogin onLoginSuccess={handleLoginSuccess} />;
+  }
   const handleScanSuccess = (data: ScanResponse, token: string) => {
     if (data.success && data.student && data.claims) {
       setScannedData({
@@ -72,11 +83,20 @@ export default function AdminApp() {
     setError(null);
   };
 
+  const handleTabChange = (tab: 'scanner' | 'database') => {
+    setActiveTab(tab);
+    // Clear scanned data when switching tabs
+    if (tab === 'database') {
+      setScannedData(null);
+      setError(null);
+    }
+  };
+
   return (
     <div className="admin-app">
       <div className="admin-container">
         <header className="admin-header">
-          <img src="/SUTD Logo Dark.webp" alt="SUTD Logo" className="sutd-logo" />
+          <img src="/ROOT_logo_white-03.png" alt="ROOT Logo" className="sutd-logo" />
           <h1 className="admin-title">SUTD Open House 2026</h1>
           <p className="admin-subtitle">Event Check-In Station</p>
           {scanCount > 0 && (
@@ -87,40 +107,66 @@ export default function AdminApp() {
         </header>
 
         <main className="admin-main">
+          {/* Tab Navigation */}
+          <div className="tab-navigation">
+            <button
+              className={`tab-button ${activeTab === 'scanner' ? 'active' : ''}`}
+              onClick={() => handleTabChange('scanner')}
+            >
+              Scanner
+            </button>
+            <button
+              className={`tab-button ${activeTab === 'database' ? 'active' : ''}`}
+              onClick={() => handleTabChange('database')}
+            >
+              Database View
+            </button>
+          </div>
+
           {error && (
             <div className="error-container">
               <ErrorMessage message={error} onDismiss={handleDismissError} />
             </div>
           )}
 
-          {!scannedData ? (
-            <div className="scanner-section">
-              <QRScanner 
-                onScanSuccess={handleScanSuccess} 
-                onScanError={handleScanError} 
-              />
-              <div className="scanner-help">
-                <p>📱 Point your camera at a student's QR code to begin check-in</p>
-              </div>
-            </div>
-          ) : (
-            <div className="student-section">
-              <StudentInfoCard student={scannedData.student} />
-              
-              <ClaimStatusDisplay claims={scannedData.claims} />
-              
-              <ClaimCheckboxes 
-                token={scannedData.token}
-                claims={scannedData.claims}
-                onClaimUpdate={handleClaimUpdate}
-              />
+          {/* Scanner Tab */}
+          {activeTab === 'scanner' && (
+            <>
+              {!scannedData ? (
+                <div className="scanner-section">
+                  <QRScanner 
+                    onScanSuccess={handleScanSuccess} 
+                    onScanError={handleScanError} 
+                  />
+                  <div className="scanner-help">
+                    <p>📱 Point your camera at a student's QR code to begin check-in</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="student-section">
+                  <StudentInfoCard student={scannedData.student} />
+                  
+                  <ClaimCheckboxes 
+                    studentId={scannedData.student.studentId}
+                    claims={scannedData.claims}
+                    onClaimUpdate={handleClaimUpdate}
+                  />
 
-              <button 
-                onClick={handleScanAnother}
-                className="scan-another-button"
-              >
-                Scan Another Student
-              </button>
+                  <button 
+                    onClick={handleScanAnother}
+                    className="scan-another-button"
+                  >
+                    Scan Another Student
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Database View Tab */}
+          {activeTab === 'database' && (
+            <div className="database-section">
+              <DatabaseTableView />
             </div>
           )}
         </main>
@@ -133,7 +179,7 @@ export default function AdminApp() {
       <style>{`
         .admin-app {
           min-height: 100vh;
-          background: linear-gradient(135deg, #E63946 0%, #C1121F 50%, #780000 100%);
+          background: #53001b;
           padding: 16px;
           padding-bottom: 40px;
           overflow-y: auto;
@@ -199,6 +245,43 @@ export default function AdminApp() {
           display: flex;
           flex-direction: column;
           gap: 16px;
+        }
+
+        .tab-navigation {
+          display: flex;
+          gap: 8px;
+          background: rgba(255, 255, 255, 0.95);
+          padding: 8px;
+          border-radius: 12px;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .tab-button {
+          flex: 1;
+          padding: 12px 16px;
+          background: transparent;
+          color: #666;
+          border: none;
+          border-radius: 8px;
+          font-size: 16px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .tab-button:hover {
+          background: rgba(102, 126, 234, 0.1);
+          color: #667eea;
+        }
+
+        .tab-button.active {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+          box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        .database-section {
+          animation: fadeIn 0.4s ease-out;
         }
 
         .error-container {
@@ -332,6 +415,16 @@ export default function AdminApp() {
             font-size: 15px;
           }
 
+          .tab-navigation {
+            padding: 6px;
+            gap: 6px;
+          }
+
+          .tab-button {
+            padding: 10px 12px;
+            font-size: 15px;
+          }
+
           .scanner-help p {
             font-size: 15px;
           }
@@ -383,6 +476,16 @@ export default function AdminApp() {
             font-size: 14px;
           }
 
+          .tab-navigation {
+            padding: 5px;
+            gap: 5px;
+          }
+
+          .tab-button {
+            padding: 9px 10px;
+            font-size: 14px;
+          }
+
           .scanner-help {
             padding: 14px;
           }
@@ -406,6 +509,10 @@ export default function AdminApp() {
         @media (hover: none) and (pointer: coarse) {
           .scan-another-button {
             min-height: 56px;
+          }
+
+          .tab-button {
+            min-height: 48px;
           }
         }
 

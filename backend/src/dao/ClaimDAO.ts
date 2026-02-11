@@ -112,6 +112,87 @@ export class ClaimDAO {
       client.release();
     }
   }
+
+  /**
+   * Update distribution status for a specific item type (bidirectional)
+   * Supports both checking and unchecking status
+   * Returns the updated claim status
+   */
+  async updateDistributionStatus(
+    studentId: string, 
+    itemType: 'tshirt' | 'meal', 
+    collected: boolean
+  ): Promise<Claim> {
+    const client = await pool.connect();
+    
+    try {
+      await client.query('BEGIN');
+
+      // Check if claim record exists
+      const checkQuery = `
+        SELECT id
+        FROM claims
+        WHERE student_id = $1
+        FOR UPDATE
+      `;
+      
+      const checkResult = await client.query(checkQuery, [studentId]);
+      
+      if (checkResult.rows.length === 0) {
+        // Initialize if doesn't exist
+        await client.query(`
+          INSERT INTO claims (student_id, tshirt_claimed, meal_claimed)
+          VALUES ($1, false, false)
+        `, [studentId]);
+      }
+
+      // Update the claim status
+      const updateQuery = itemType === 'tshirt'
+        ? `
+          UPDATE claims
+          SET tshirt_claimed = $1, 
+              tshirt_claimed_at = CASE WHEN $1 = true THEN CURRENT_TIMESTAMP ELSE tshirt_claimed_at END,
+              updated_at = CURRENT_TIMESTAMP
+          WHERE student_id = $2
+          RETURNING 
+            id, 
+            student_id as "studentId", 
+            tshirt_claimed as "tshirtClaimed", 
+            meal_claimed as "mealClaimed",
+            tshirt_claimed_at as "tshirtClaimedAt",
+            meal_claimed_at as "mealClaimedAt",
+            created_at as "createdAt",
+            updated_at as "updatedAt"
+        `
+        : `
+          UPDATE claims
+          SET meal_claimed = $1, 
+              meal_claimed_at = CASE WHEN $1 = true THEN CURRENT_TIMESTAMP ELSE meal_claimed_at END,
+              updated_at = CURRENT_TIMESTAMP
+          WHERE student_id = $2
+          RETURNING 
+            id, 
+            student_id as "studentId", 
+            tshirt_claimed as "tshirtClaimed", 
+            meal_claimed as "mealClaimed",
+            tshirt_claimed_at as "tshirtClaimedAt",
+            meal_claimed_at as "mealClaimedAt",
+            created_at as "createdAt",
+            updated_at as "updatedAt"
+        `;
+      
+      const result = await client.query(updateQuery, [collected, studentId]);
+      
+      await client.query('COMMIT');
+      return result.rows[0];
+      
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
 }
 
 export default new ClaimDAO();

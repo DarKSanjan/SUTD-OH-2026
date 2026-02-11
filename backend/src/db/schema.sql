@@ -14,6 +14,7 @@ CREATE TABLE students (
   tshirt_size TEXT NOT NULL,
   meal_preference TEXT NOT NULL,
   organization_details TEXT,
+  consented BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

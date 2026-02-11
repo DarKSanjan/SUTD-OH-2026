@@ -5,6 +5,7 @@ export interface Student {
   tshirtSize: string;
   mealPreference: string;
   organizationDetails?: string;
+  consented?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 }

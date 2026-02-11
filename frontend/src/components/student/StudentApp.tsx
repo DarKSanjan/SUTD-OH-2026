@@ -2,6 +2,7 @@ import { useState } from 'react';
 import StudentIDForm from './StudentIDForm';
 import QRCodeDisplay from './QRCodeDisplay';
 import EasterEgg from './EasterEgg';
+import PDPAConsent from './PDPAConsent';
 import { apiPost, getErrorMessage } from '../../services/api';
 
 interface StudentData {
@@ -17,7 +18,26 @@ interface ValidationResponse {
   student?: StudentData;
   qrCode?: string;
   token?: string;
+  collectionStatus?: {
+    shirtCollected: boolean;
+    mealCollected: boolean;
+  };
   error?: string;
+}
+
+/**
+ * Determines whether to show the easter egg for a given student ID.
+ * Always shows for student ID "1009104", and shows with 1/75 probability for others.
+ * Randomization is per session (each call generates a new random value).
+ */
+function shouldShowEasterEgg(studentId: string): boolean {
+  // Always show for special ID
+  if (studentId === '1009104') {
+    return true;
+  }
+  
+  // 1 in 75 random chance for others
+  return Math.random() < (1 / 75);
 }
 
 export default function StudentApp() {
@@ -26,10 +46,12 @@ export default function StudentApp() {
   const [validationResult, setValidationResult] = useState<ValidationResponse | null>(null);
   const [showEasterEgg, setShowEasterEgg] = useState(false);
   const [pendingStudentId, setPendingStudentId] = useState<string | null>(null);
+  const [showConsent, setShowConsent] = useState(false);
+  const [consentGiven, setConsentGiven] = useState(false);
 
   const handleSubmit = async (studentId: string) => {
-    // Easter egg for student ID 1009104
-    if (studentId === '1009104') {
+    // Check if easter egg should be shown
+    if (shouldShowEasterEgg(studentId)) {
       setPendingStudentId(studentId);
       setShowEasterEgg(true);
       return;
@@ -45,6 +67,8 @@ export default function StudentApp() {
       // Handle success
       setValidationResult(data);
       setError(null);
+      // Show consent screen after successful validation
+      setShowConsent(true);
     } catch (err) {
       // Handle errors
       console.error('Validation error:', err);
@@ -58,6 +82,8 @@ export default function StudentApp() {
   const handleReset = () => {
     setValidationResult(null);
     setError(null);
+    setShowConsent(false);
+    setConsentGiven(false);
   };
 
   const handleEasterEggComplete = async () => {
@@ -70,6 +96,8 @@ export default function StudentApp() {
         const data = await apiPost<ValidationResponse>('/api/validate', { studentId: pendingStudentId });
         setValidationResult(data);
         setError(null);
+        // Show consent screen after successful validation
+        setShowConsent(true);
       } catch (err) {
         console.error('Validation error:', err);
         setError(getErrorMessage(err));
@@ -81,12 +109,23 @@ export default function StudentApp() {
     }
   };
 
+  const handleConsentGiven = () => {
+    setConsentGiven(true);
+    setShowConsent(false);
+  };
+
+  const handleConsentBack = () => {
+    setShowConsent(false);
+    setValidationResult(null);
+    setError(null);
+  };
+
   return (
     <div className="student-app">
       {showEasterEgg && <EasterEgg onComplete={handleEasterEggComplete} />}
       
       <div className="student-app-header">
-        <img src="/SUTD Logo Dark.webp" alt="SUTD Logo" className="sutd-logo" />
+        <img src="/ROOT_logo_white-03.png" alt="ROOT Logo" className="sutd-logo" />
         <h1>SUTD Open House 2026</h1>
         <p>Event Check-In System</p>
       </div>
@@ -97,20 +136,26 @@ export default function StudentApp() {
           isLoading={isLoading}
           error={error}
         />
-      ) : (
-        validationResult.student && validationResult.qrCode && (
-          <QRCodeDisplay
-            qrCode={validationResult.qrCode}
-            student={validationResult.student}
-            onGenerateNew={handleReset}
-          />
-        )
-      )}
+      ) : showConsent ? (
+        <PDPAConsent
+          studentId={validationResult.student?.studentId || ''}
+          onConsentGiven={handleConsentGiven}
+          onBack={handleConsentBack}
+        />
+      ) : consentGiven && validationResult.student && validationResult.qrCode ? (
+        <QRCodeDisplay
+          qrCode={validationResult.qrCode}
+          student={validationResult.student}
+          shirtCollected={validationResult.collectionStatus?.shirtCollected || false}
+          mealCollected={validationResult.collectionStatus?.mealCollected || false}
+          onGenerateNew={handleReset}
+        />
+      ) : null}
 
       <style>{`
         .student-app {
           min-height: 100vh;
-          background: linear-gradient(135deg, #E63946 0%, #C1121F 50%, #780000 100%);
+          background: #53001b;
           padding: 20px;
         }
         

@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import InvolvementDisplay from '../shared/InvolvementDisplay';
 
 interface StudentInvolvement {
@@ -16,10 +17,41 @@ interface StudentData {
 interface QRCodeDisplayProps {
   qrCode: string;
   student: StudentData;
+  shirtCollected?: boolean;
+  mealCollected?: boolean;
   onGenerateNew?: () => void;
 }
 
-export default function QRCodeDisplay({ qrCode, student, onGenerateNew }: QRCodeDisplayProps) {
+export default function QRCodeDisplay({ qrCode, student, shirtCollected: initialShirtCollected = false, mealCollected: initialMealCollected = false, onGenerateNew }: QRCodeDisplayProps) {
+  const [shirtCollected, setShirtCollected] = useState(initialShirtCollected);
+  const [mealCollected, setMealCollected] = useState(initialMealCollected);
+
+  // Poll for collection status updates every 3 seconds
+  useEffect(() => {
+    const pollCollectionStatus = async () => {
+      try {
+        const response = await fetch(`/api/distribution-status/${student.studentId}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.status) {
+            setShirtCollected(data.status.tshirtClaimed);
+            setMealCollected(data.status.mealClaimed);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch collection status:', error);
+      }
+    };
+
+    // Poll immediately on mount
+    pollCollectionStatus();
+
+    // Then poll every 3 seconds
+    const intervalId = setInterval(pollCollectionStatus, 3000);
+
+    // Cleanup on unmount
+    return () => clearInterval(intervalId);
+  }, [student.studentId]);
   return (
     <div className="qr-code-display">
       <div className="success-message">
@@ -70,12 +102,26 @@ export default function QRCodeDisplay({ qrCode, student, onGenerateNew }: QRCode
         </p>
       </div>
 
+      <div className="collection-status">
+        <h3>Collection Status</h3>
+        <div className="status-grid">
+          <div className={`status-item ${shirtCollected ? 'collected' : 'not-collected'}`}>
+            <span className="status-icon">{shirtCollected ? '✓' : '✗'}</span>
+            <span className="status-label">Shirt Collected</span>
+          </div>
+          <div className={`status-item ${mealCollected ? 'collected' : 'not-collected'}`}>
+            <span className="status-icon">{mealCollected ? '✓' : '✗'}</span>
+            <span className="status-label">Meal Collected</span>
+          </div>
+        </div>
+      </div>
+
       {onGenerateNew && (
         <button 
           onClick={onGenerateNew} 
           className="generate-new-button"
         >
-          Generate New QR Code
+          Start Over
         </button>
       )}
 
@@ -187,6 +233,54 @@ export default function QRCodeDisplay({ qrCode, student, onGenerateNew }: QRCode
           font-size: 14px;
           line-height: 1.5;
           margin: 0;
+        }
+
+        .collection-status {
+          margin-bottom: 24px;
+          padding: 16px;
+          background: #f5f5f5;
+          border-radius: 4px;
+        }
+
+        .collection-status h3 {
+          color: #333;
+          font-size: 18px;
+          margin-bottom: 12px;
+          font-weight: 600;
+        }
+
+        .status-grid {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .status-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 8px 0;
+        }
+
+        .status-icon {
+          font-size: 20px;
+          font-weight: bold;
+          width: 24px;
+          text-align: center;
+        }
+
+        .status-item.collected .status-icon {
+          color: #4CAF50;
+        }
+
+        .status-item.not-collected .status-icon {
+          color: #f44336;
+        }
+
+        .status-label {
+          color: #333;
+          font-size: 14px;
+          font-weight: 500;
         }
 
         .generate-new-button {

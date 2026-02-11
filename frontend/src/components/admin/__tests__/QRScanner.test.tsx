@@ -10,7 +10,7 @@ const mockStop = vi.fn();
 vi.mock('html5-qrcode', () => ({
   Html5Qrcode: vi.fn().mockImplementation(() => ({
     start: mockStart,
-    stop: mockStop,
+    stop: mockStop.mockResolvedValue(undefined),
   })),
 }));
 
