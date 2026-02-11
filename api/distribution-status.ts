@@ -87,7 +87,8 @@ async function handler(req: VercelRequest, res: VercelResponse) {
       await client.query('COMMIT');
 
       return sendSuccess(res, {
-        updatedStatus: {
+        claim: {
+          studentId: actualStudentId,
           tshirtClaimed: result.rows[0].tshirtClaimed,
           mealClaimed: result.rows[0].mealClaimed,
         },
