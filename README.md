@@ -1,216 +1,63 @@
-# Event Check-In System
+# SUTD Open House 2026 — Volunteer Management System
 
-A production-ready web application for managing student check-ins at SUTD Open House 2026. Features QR code generation, mobile scanning, real-time claim tracking, and comprehensive testing.
+This is the volunteer management system used during SUTD's Open House 2026. It was built over a weekend to handle check-ins, t-shirt and meal coupon distribution, and give admins a live view of what's been claimed.
 
-## 📚 Documentation
+## What it does
 
-- 🎊 **[Final Polish Summary](./FINAL_POLISH_SUMMARY.md)** - Complete readiness overview
-- 🚀 **[Deployment Quick Start](./DEPLOYMENT_QUICKSTART.md)** - Deploy to Vercel in 5 minutes
-- ✅ **[Deployment Checklist](./DEPLOYMENT_CHECKLIST.md)** - Pre-deployment verification
-- 🏭 **[Production Setup Guide](./PRODUCTION_SETUP.md)** - Complete production configuration
-- 🧪 **[Local Testing Guide](./LOCAL_TESTING_GUIDE.md)** - Local testing instructions
-- 🔧 **[API Documentation](./api/README.md)** - Serverless functions reference
-- 📝 **[Backend Documentation](./backend/README.md)** - Backend architecture
+Volunteers register with their student ID, which generates a personal QR code. At distribution points, admins scan the QR code to mark a t-shirt or meal coupon as collected. The admin panel shows a table of all registered students and their claim status in real time.
 
-## 🎯 Current Status
+- Student ID entry and QR code generation
+- QR code scanning for admins (mobile-friendly)
+- Claim tracking for t-shirts and meal coupons, with duplicate prevention
+- Admin dashboard with a live table of all students and their status
+- Simple admin authentication
 
-### ✅ Production Ready
-- All frontend tests passing (285/285)
-- Backend tests optimized and stable
-- Mobile-responsive design implemented
-- QR code generation and scanning working
-- Admin authentication in place
-- Database schema finalized
-- Deployment configuration complete
+## Tech stack
 
-### 🚀 Ready for Deployment
-This application is **fully polished and ready** for:
-1. Local testing
-2. Staging deployment
-3. Production deployment to Vercel
+- **Frontend**: React 18, TypeScript, Vite
+- **Backend**: Node.js, Express, TypeScript
+- **Database**: PostgreSQL on Supabase
+- **Deployment**: Vercel (serverless functions + static hosting)
+- **QR codes**: `qrcode` for generation, `html5-qrcode` for scanning
 
-See [DEPLOYMENT_QUICKSTART.md](./DEPLOYMENT_QUICKSTART.md) to get started!
+## Running locally
 
-## Project Structure
-
-```
-.
-├── api/                    # Vercel serverless functions (production)
-│   ├── validate.ts        # POST /api/validate
-│   ├── scan.ts            # POST /api/scan
-│   ├── claim.ts           # POST /api/claim
-│   └── health.ts          # GET /api/health
-│
-├── backend/               # Express + TypeScript backend (local dev)
-│   ├── src/
-│   │   ├── dao/          # Data Access Objects
-│   │   ├── services/     # Business logic services
-│   │   ├── routes/       # API route handlers
-│   │   ├── models/       # TypeScript interfaces/types
-│   │   ├── db/           # Database schema and migrations
-│   │   └── index.ts      # Application entry point
-│   ├── package.json
-│   └── tsconfig.json
-│
-├── frontend/             # React + Vite + TypeScript frontend
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── student/  # Student app components
-│   │   │   ├── admin/    # Admin app components
-│   │   │   └── shared/   # Shared components
-│   │   ├── services/     # API client
-│   │   ├── config/       # Environment configuration
-│   │   ├── App.tsx       # Main app component
-│   │   └── main.tsx      # Application entry point
-│   ├── package.json
-│   └── vite.config.ts
-│
-└── vercel.json           # Vercel deployment configuration
-```
-
-## Getting Started
-
-### Local Development
-
-#### Backend
+You need both the backend and frontend running at the same time.
 
 ```bash
+# Terminal 1 — backend (runs on :3000)
 cd backend
 npm install
-npm run dev          # Start development server on port 3000
-npm run build        # Build for production
-npm test            # Run tests
-npm run migrate     # Run database migrations
-```
+npm run dev
 
-#### Frontend
-
-```bash
+# Terminal 2 — frontend (runs on :5173)
 cd frontend
 npm install
-npm run dev          # Start development server on port 5173
-npm run build        # Build for production
-npm test            # Run tests
+npm run dev
 ```
 
-The frontend dev server proxies API requests to the backend at `http://localhost:3000`.
+Then open `http://localhost:5173`.
 
-**Start both servers for full development:**
-1. Terminal 1: `cd backend && npm run dev`
-2. Terminal 2: `cd frontend && npm run dev`
-3. Open browser: `http://localhost:5173`
+## Deployment
 
-### Production Deployment
+Hosted on Vercel with Supabase as the database. The `/api` directory contains the serverless functions that replace the Express backend in production.
 
-Deploy to Vercel + Supabase in 5 minutes:
+Environment variables needed:
 
-1. **Set up Supabase database**
-   ```bash
-   # Create project at supabase.com
-   # Run backend/src/db/schema.sql in SQL Editor
-   # Import CSV data
-   ```
+- `DATABASE_URL` — Supabase connection string
+- `VITE_API_URL` — the Vercel deployment URL
 
-2. **Deploy to Vercel**
-   ```bash
-   # Connect GitHub repo at vercel.com
-   # Add environment variables:
-   # - DATABASE_URL (from Supabase)
-   # - NODE_ENV=production
-   # - FRONTEND_URL (your Vercel URL)
-   # - VITE_API_URL (your Vercel URL)
-   ```
+## Honest caveats
 
-3. **Test deployment**
-   ```bash
-   # Visit https://your-app.vercel.app/api/health
-   # Test student app at /
-   # Test admin app at /admin
-   ```
+This was built over a weekend for a one-time event, so corners were cut:
 
-See [DEPLOYMENT_QUICKSTART.md](./DEPLOYMENT_QUICKSTART.md) for detailed steps.
+- Auth is minimal — the admin password is an environment variable, not a proper auth system
+- No role management; it's just admin or not
+- Error handling is functional but not polished
+- The local dev setup (Express) and production setup (Vercel serverless) are two different backends kept in sync by hand, which is a bit fragile
 
-## Technology Stack
-
-- **Backend**: Node.js, Express, TypeScript, PostgreSQL (Supabase)
-- **Frontend**: React 18, Vite, TypeScript, React Router
-- **Deployment**: Vercel (serverless functions + static hosting)
-- **Database**: PostgreSQL on Supabase (free tier)
-- **QR Code**: qrcode (generation), html5-qrcode (scanning)
-- **Testing**: Vitest, fast-check (property-based testing)
-
-## Architecture
-
-### Local Development
-- Express server runs on `localhost:3000`
-- React dev server runs on `localhost:5173`
-- SQLite database for local testing
-
-### Production
-- Frontend: Static assets served by Vercel CDN
-- Backend: Serverless functions in `/api` directory
-- Database: PostgreSQL on Supabase
-- Auto-scaling with serverless architecture
-
-## Features
-
-- ✅ Student ID validation with QR code generation
-- ✅ Mobile-friendly QR code scanner for admins
-- ✅ Real-time claim tracking (t-shirts, meal coupons)
-- ✅ Duplicate claim prevention
-- ✅ Organization involvement display
-- ✅ Offline-capable (with service workers)
-- ✅ Property-based testing for correctness
-- ✅ End-to-end integration tests
-
-## Testing
-
-```bash
-# Run all tests
-npm test
-
-# Run backend tests
-cd backend && npm test
-
-# Run frontend tests
-cd frontend && npm test
-
-# Run specific test file
-npm test -- StudentDAO.test.ts
-```
-
-## Environment Variables
-
-### Backend (Local Development)
-```bash
-# backend/.env
-DATABASE_URL=postgresql://user:pass@host:5432/db
-NODE_ENV=development
-PORT=3000
-```
-
-### Frontend (Local Development)
-```bash
-# frontend/.env.development
-VITE_API_URL=http://localhost:3000
-```
-
-### Production (Vercel)
-Set in Vercel dashboard:
-- `DATABASE_URL` - Supabase connection string
-- `NODE_ENV` - production
-- `FRONTEND_URL` - Your Vercel URL
-- `VITE_API_URL` - Your Vercel URL
-
-## Documentation
-
-- [Deployment Quick Start](./DEPLOYMENT_QUICKSTART.md) - 5-minute deployment guide
-- [Full Deployment Guide](./DEPLOYMENT.md) - Comprehensive deployment instructions
-- [API Documentation](./api/README.md) - Serverless functions reference
-- [Backend Documentation](./backend/README.md) - Backend architecture and setup
-- [Integration Guide](./INTEGRATION.md) - Frontend-backend integration
+It did the job on the day. If you're repurposing this for something more serious, the auth and the dev/prod backend split are the two things most worth rethinking.
 
 ## License
 
 MIT
-# Deployment Thu Feb 12 04:38:15 +08 2026
